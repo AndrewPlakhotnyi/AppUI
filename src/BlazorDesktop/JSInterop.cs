@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using Microsoft.JSInterop.Infrastructure;
@@ -17,6 +18,7 @@ DesktopJsRuntime: JSRuntime {
     public DesktopJsRuntime(WebViewEvents ipcEvents, IWebViewCommunicationChannel ipcChannel) {
         CommunicationChannel = ipcChannel;
         WebViewEvents = ipcEvents;
+        base.JsonSerializerOptions.Converters.Add(new ElementReferenceJsonConverter());
     }
 
     private static readonly Type 
@@ -86,7 +88,7 @@ JSInteropHelper {
                             DotNetDispatcher.BeginInvokeDotNet(
                                 jsRuntime:jsRuntime,
                                 invocationInfo:new DotNetInvocationInfo(
-                                    assemblyName: ((JsonElement)args[1]).GetString() ?? throw new ArgumentException("AssemblyName is null in the received args"),
+                                    assemblyName:args[1] != null ? ((JsonElement)args[1]).GetString() : null,
                                     methodIdentifier: ((JsonElement)args[2]).GetString()?? throw new ArgumentException("AssemblyName is null in the received args"),
                                     dotNetObjectId: ((JsonElement)args[3]).GetInt64() ,
                                     callId: ((JsonElement)args[0]).GetString()),
