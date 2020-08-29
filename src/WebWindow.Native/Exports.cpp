@@ -71,6 +71,10 @@ extern "C" {
     EXPORTED void WebWindow_Move(HWND hWnd, int x, int y){
         Move(GetWebWindow(hWnd), x, y);
     }
+
+    EXPORTED int WebWindow_GetScreenDpi(HWND hWnd){
+        return GetScreenDpi(GetWebWindow(hWnd));
+    }
 }
 
 

@@ -52,7 +52,6 @@ struct WindowStarupOptions {
     ACTION ClosedCallback;
 };
 
-
 WebWindow* GetWebWindow(HWND hWnd);
 void RegisterWebWindowClass(HINSTANCE hInstance);
 HWND CreateWebWindow(WindowStarupOptions starupOptions);
@@ -72,4 +71,5 @@ void Close(const WebWindow* window);
 void RefitContent(const WebWindow* window);
 void Move(const WebWindow* window, int x, int y);
 void Reload(const WebWindow* window);
+int GetScreenDpi(const WebWindow* window);
 #endif // !APPUI_H

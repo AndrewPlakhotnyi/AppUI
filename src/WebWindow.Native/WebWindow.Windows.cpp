@@ -313,6 +313,10 @@ void Move(const WebWindow* window, int x, int y) {
 	MoveWindow(window->hWnd, x, y, currentArea.right - currentArea.left, currentArea.bottom - currentArea.top, false);
 }
 
+int GetScreenDpi(const WebWindow* window){
+	return GetDpiForWindow(window->hWnd);
+}
+
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	switch(uMsg){
 	case WM_SIZE: {

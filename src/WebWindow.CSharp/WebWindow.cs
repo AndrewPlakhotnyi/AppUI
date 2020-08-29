@@ -162,6 +162,9 @@ WebWindow: IDisposable {
 
     public void 
     Move(int x, int y) => Native.WebWindow_Move(HWnd, x, y);
+
+    public int
+    GetScreenDpi() => Native.WebWindow_GetScreenDpi(HWnd);
 }
 
 public class 
@@ -300,6 +303,9 @@ internal class Native {
     
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern void WebWindow_Move(int hWnd, int x, int y);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)] 
+    public static extern int WebWindow_GetScreenDpi(int hWnd);
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct 

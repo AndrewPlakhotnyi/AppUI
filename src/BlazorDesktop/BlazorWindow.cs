@@ -86,6 +86,7 @@ BlazorWindow {
     }
 
     public WindowPosition Position {get; private set;}
+    public double GetDevicePixelRatio() => WebWindow.GetScreenDpi() / 96d;
 }
 
 public class SingleLoggerFactory : ILoggerProvider {
