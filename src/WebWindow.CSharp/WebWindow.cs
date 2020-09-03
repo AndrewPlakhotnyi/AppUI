@@ -18,6 +18,7 @@ WebWindow: IDisposable {
     public event EventHandler<WindowMovedEventArgs> Moved;
     public event EventHandler<WindowSizeChangedEventArgs> SizeChanged;
     public event EventHandler<WindowClosingEventArgs> Closing;
+    public event EventHandler<WindowDpiChangedEventArgs> DpiChanged;
     public event EventHandler Closed;
     public static Thread CreatedThread {get; private set;}
     private bool IsClosed {get;set;}
@@ -39,6 +40,7 @@ WebWindow: IDisposable {
         
         Native.WindowMovedCallback movedCallback = (newX, newY) => webWindow.Moved?.Invoke(webWindow, new WindowMovedEventArgs(newX, newY));
         Native.WindowSizeChangedCallback sizeChangedCallback = (newWidth, newHeight, isMaximized) => webWindow.SizeChanged?.Invoke(webWindow, new WindowSizeChangedEventArgs(newWidth, newHeight, isMaximized));
+        Native.WindowDpiChangedCallback dpiChangedCallback = (newDpi) => webWindow.DpiChanged?.Invoke(webWindow, new WindowDpiChangedEventArgs(newDpi));
         Native.WindowClosingCallback closingCallback = () => {
             var args = new WindowClosingEventArgs();
             webWindow.Closing?.Invoke(webWindow, args);
@@ -54,7 +56,8 @@ WebWindow: IDisposable {
                 MovedCallback = movedCallback,
                 SizeChangedCallback = sizeChangedCallback,
                 ClosedCallback = closedCallback,
-                ClosingCallback = closingCallback
+                ClosingCallback = closingCallback,
+                DpiChangedCallback = dpiChangedCallback,
             });
         if (hWnd == 0)
             throw new Win32Exception();
@@ -74,6 +77,7 @@ WebWindow: IDisposable {
         webWindow._gcHandlesToFree.Add(GCHandle.Alloc(sizeChangedCallback));
         webWindow._gcHandlesToFree.Add(GCHandle.Alloc(closingCallback));
         webWindow._gcHandlesToFree.Add(GCHandle.Alloc(closedCallback));
+        webWindow._gcHandlesToFree.Add(GCHandle.Alloc(dpiChangedCallback));
         var attachResult = Native.WebWindow_AttachWebView(hWnd, webMesasgeReceivedCallback);
         if (attachResult != 0)
             throw new InvalidOperationException("Failed to attach the webview", Marshal.GetExceptionForHR(attachResult));
@@ -155,16 +159,19 @@ WebWindow: IDisposable {
     Reload() => Native.WebWindow_Reload(HWnd);
 
     public void 
+    Move(int x, int y) => Native.WebWindow_Move(HWnd, x, y);
+
+    public void
+    DragMove() => Native.WebWindow_DragMove(HWnd);
+
+    public int
+    GetScreenDpi() => Native.WebWindow_GetScreenDpi(HWnd);
+
+    public void 
     Dispose() {
         _gcHandlesToFree.ForEach(x => x.Free());
         _hGlobalsToFree.ForEach(Marshal.FreeHGlobal);
     }
-
-    public void 
-    Move(int x, int y) => Native.WebWindow_Move(HWnd, x, y);
-
-    public int
-    GetScreenDpi() => Native.WebWindow_GetScreenDpi(HWnd);
 }
 
 public class 
@@ -192,6 +199,14 @@ WindowSizeChangedEventArgs {
 public class 
 WindowClosingEventArgs {
     public bool CancelClosure {get;set;}
+}
+
+public class 
+WindowDpiChangedEventArgs {
+    public int NewDpi {get;}
+    public WindowDpiChangedEventArgs(int newDpi) {
+        NewDpi = newDpi;
+    }
 }
 
 public struct 
@@ -252,6 +267,9 @@ internal class Native {
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] 
     public delegate int WindowClosingCallback();
 
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] 
+    public delegate void WindowDpiChangedCallback(int newDpi);
+
     [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Auto)] 
     public delegate IntPtr OnWebResourceRequestedCallback([MarshalAs(UnmanagedType.LPWStr)] string url, out int numBytes, out string contentType);
 
@@ -304,6 +322,9 @@ internal class Native {
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern void WebWindow_Move(int hWnd, int x, int y);
 
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+    public static extern void WebWindow_DragMove(int hWnd);
+
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)] 
     public static extern int WebWindow_GetScreenDpi(int hWnd);
 
@@ -320,6 +341,7 @@ internal class Native {
         public WindowMovedCallback MovedCallback;
         public WindowSizeChangedCallback SizeChangedCallback;
         public WindowClosingCallback ClosingCallback;
+        public WindowDpiChangedCallback DpiChangedCallback;
         public InvokeCallback ClosedCallback;
     }
 

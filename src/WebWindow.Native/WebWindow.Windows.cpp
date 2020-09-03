@@ -38,6 +38,7 @@ HWND CreateWebWindow(WindowStarupOptions options) {
 	webWindow.SizeChangedCallback = options.SizeChangedCallback;
 	webWindow.ClosingCallback = options.ClosingCallback;
 	webWindow.ClosedCallback = options.ClosedCallback;
+	webWindow.DpiChangedCallback = options.DpiChangedCallback;
 	webWindow.style = options.style;
     HWND hWnd = CreateWindowEx(
 		0,                              // Optional window styles.
@@ -313,6 +314,11 @@ void Move(const WebWindow* window, int x, int y) {
 	MoveWindow(window->hWnd, x, y, currentArea.right - currentArea.left, currentArea.bottom - currentArea.top, false);
 }
 
+void DragMove(const WebWindow* window) {
+	ReleaseCapture();
+	SendMessage(window->hWnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+}
+
 int GetScreenDpi(const WebWindow* window){
 	return GetDpiForWindow(window->hWnd);
 }
@@ -355,7 +361,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 				DestroyWindow(webWindow->hWnd);
 
 			return 0;
-		}
+	}
 	case WM_DESTROY: {
 		WebWindow* webWindow = TryGetWebWindow(hWnd);
 		if (webWindow != NULL && webWindow->ClosedCallback != NULL)
@@ -363,7 +369,18 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 		PostQuitMessage(0);
 		break;
 	}
-
+	case WM_DPICHANGED: {
+		WebWindow* webWindow = TryGetWebWindow(hWnd);
+		if (webWindow == NULL)
+			return 0;
+		LPRECT lprNewRect = (LPRECT)lParam;
+		SetWindowPos(hWnd, 0, lprNewRect->left, lprNewRect->top, lprNewRect->right - lprNewRect->left, lprNewRect->bottom - lprNewRect->top, SWP_NOZORDER | SWP_NOACTIVATE);
+		if (webWindow->DpiChangedCallback != NULL) {
+			int newDpi = LOWORD(wParam);
+			webWindow->DpiChangedCallback(newDpi);
+		}
+		return 0;
+	}
 	}
 
 	return DefWindowProc(hWnd, uMsg, wParam, lParam);

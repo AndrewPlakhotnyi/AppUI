@@ -22,8 +22,7 @@ using System.Dynamic;
 namespace BlazorDesktop {
 
 public abstract class 
-BlazorWindowContent: ComponentBase {
-    
+BlazorWindowContent: ComponentBase {    
     public BlazorWindow Window {get;set;}
 }
 
@@ -59,16 +58,23 @@ BlazorWindow {
         };
 
         webWindow.Closed += (s,e) => OnClosed();
-        webWindow.Closing += (s,e) => Closing?.Invoke(s,e);;
+        webWindow.Closing += (s,e) => Closing?.Invoke(s,e);
+        webWindow.DpiChanged += (s,e) => { 
+            if (ScreenDpi != e.NewDpi) {
+                ScreenDpi = e.NewDpi; 
+                DpiChanged?.Invoke(s, e); 
+            }
+        };
     }
 
     internal WebWindow WebWindow { get; }
     internal Lock<WebViewEvents> WebViewEvents { get; }
-    public DesktopJsRuntime JsRuntime { get; }
     internal DesktopRenderer Renderer {get;}
+    public DesktopJsRuntime JsRuntime { get; }
     public event EventHandler<WindowMovedEventArgs> Moved;
     public event EventHandler<WindowSizeChangedEventArgs> SizeChanged;
     public event EventHandler<WindowClosingEventArgs> Closing;
+    public event EventHandler<WindowDpiChangedEventArgs> DpiChanged;
     public event EventHandler Closed;
     public event EventHandler Loaded;
     public ILogger Logger {get;}
@@ -86,7 +92,14 @@ BlazorWindow {
     }
 
     public WindowPosition Position {get; private set;}
-    public double GetDevicePixelRatio() => WebWindow.GetScreenDpi() / 96d;
+        
+    private int? _screenDpi;
+    public int ScreenDpi {
+        get =>_screenDpi ??= WebWindow.GetScreenDpi();
+        private set => _screenDpi = value;
+    }
+
+    public void DragMove() => WebWindow.DragMove(); 
 }
 
 public class SingleLoggerFactory : ILoggerProvider {
