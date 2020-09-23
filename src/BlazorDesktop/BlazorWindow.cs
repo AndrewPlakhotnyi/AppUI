@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -65,6 +65,8 @@ BlazorWindow {
                 DpiChanged?.Invoke(s, e); 
             }
         };
+
+        webWindow.NavigationStarting += (s,e) => NavigationStarting?.Invoke(s, new WindowNavigationStartingEventArgs(e.NewUri));
     }
 
     internal WebWindow WebWindow { get; }
@@ -75,6 +77,7 @@ BlazorWindow {
     public event EventHandler<WindowSizeChangedEventArgs> SizeChanged;
     public event EventHandler<WindowClosingEventArgs> Closing;
     public event EventHandler<WindowDpiChangedEventArgs> DpiChanged;
+    public event EventHandler<WindowNavigationStartingEventArgs> NavigationStarting;
     public event EventHandler Closed;
     public event EventHandler Loaded;
     public ILogger Logger {get;}
@@ -99,7 +102,7 @@ BlazorWindow {
         private set => _screenDpi = value;
     }
 
-    public void DragMove() => WebWindow.DragMove(); 
+    public double DevicePixelRatio => ScreenDpi / 96d;
 }
 
 public class SingleLoggerFactory : ILoggerProvider {
@@ -278,7 +281,13 @@ BlazorWindowHelper {
     public static void 
     Move(this BlazorWindow window, int x, int y) => window.WebWindow.Move(x, y);
 
+    public static void    
+    DragMove(this BlazorWindow window) => window.WebWindow.DragMove(); 
+
     public static void 
     Shift(this BlazorWindow window, int deltaX, int deltaY) => window.WebWindow.Move(window.Position.X + deltaX, window.Position.Y + deltaY);
+
+    public static void
+    NavigateTo(this BlazorWindow window, string url) => window.WebWindow.NavigateToUrl(url);
 }
 }

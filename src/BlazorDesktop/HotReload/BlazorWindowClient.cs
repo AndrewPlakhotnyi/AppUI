@@ -67,11 +67,11 @@ BlazorWindowClientHelper {
                 componentType: typeof(TRootComponent),
                 domElementSelector: typeof(TRootComponent).Name,
                 blazorWindow: new BlazorWindow(new WebWindow(hWnd: 0), 
-                ipcEvents: ipcEvents,
-                jsRuntime: jsRuntime,
-                renderer: renderer,
-                position: default,
-                logger: logger
+                    ipcEvents: ipcEvents,
+                    jsRuntime: jsRuntime,
+                    renderer: renderer,
+                    position: default,
+                    logger: logger
                 ));
             logger.LogInformation($"Blazor window has been created for {clock.ElapsedMilliseconds}ms");
             //BlazorDispatcher.Instance.Invoke(() => blazorWindow.OnLoaded());

@@ -15,6 +15,7 @@ typedef void* (*WebResourceRequestedCallback)(AutoString url, int* outNumBytes, 
 typedef void (*WindowMovedCallback)(int newX, int newY);
 typedef void (*WindowSizeChangedCallback)(int newWidth, int newHeight, bool isMaximized);
 typedef void (*WindowDpiChangedCallback)(int newDpi);
+typedef void (*WindowNavigationStartingCallback)(AutoString uri);
 typedef int (*WindowClosingCallback)();
 
 typedef void (*ACTION)();
@@ -33,6 +34,7 @@ struct WebWindow {
     WindowSizeChangedCallback SizeChangedCallback;
     WindowClosingCallback ClosingCallback;
     WindowDpiChangedCallback DpiChangedCallback;
+    WindowNavigationStartingCallback NavigationStartingCallback;
     ACTION ClosedCallback;
     wil::com_ptr<ICoreWebView2Controller> controller;
     wil::com_ptr<ICoreWebView2> webView;
@@ -52,6 +54,7 @@ struct WindowStarupOptions {
     WindowSizeChangedCallback SizeChangedCallback;
     WindowClosingCallback ClosingCallback;
     WindowDpiChangedCallback DpiChangedCallback;
+    WindowNavigationStartingCallback NavigationStartingCallback;
     ACTION ClosedCallback;
 };
 
@@ -75,5 +78,7 @@ void RefitContent(const WebWindow* window);
 void Move(const WebWindow* window, int x, int y);
 void DragMove(const WebWindow* window);
 void Reload(const WebWindow* window);
+
 int GetScreenDpi(const WebWindow* window);
+
 #endif // !APPUI_H

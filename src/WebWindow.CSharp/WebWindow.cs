@@ -19,6 +19,7 @@ WebWindow: IDisposable {
     public event EventHandler<WindowSizeChangedEventArgs> SizeChanged;
     public event EventHandler<WindowClosingEventArgs> Closing;
     public event EventHandler<WindowDpiChangedEventArgs> DpiChanged;
+    public event EventHandler<WindowNavigationStartingEventArgs> NavigationStarting;
     public event EventHandler Closed;
     public static Thread CreatedThread {get; private set;}
     private bool IsClosed {get;set;}
@@ -41,6 +42,7 @@ WebWindow: IDisposable {
         Native.WindowMovedCallback movedCallback = (newX, newY) => webWindow.Moved?.Invoke(webWindow, new WindowMovedEventArgs(newX, newY));
         Native.WindowSizeChangedCallback sizeChangedCallback = (newWidth, newHeight, isMaximized) => webWindow.SizeChanged?.Invoke(webWindow, new WindowSizeChangedEventArgs(newWidth, newHeight, isMaximized));
         Native.WindowDpiChangedCallback dpiChangedCallback = (newDpi) => webWindow.DpiChanged?.Invoke(webWindow, new WindowDpiChangedEventArgs(newDpi));
+        Native.WindowNavigationStarting navigationStartingCallback = (newUri) => webWindow.NavigationStarting?.Invoke(webWindow, new WindowNavigationStartingEventArgs(newUri));
         Native.WindowClosingCallback closingCallback = () => {
             var args = new WindowClosingEventArgs();
             webWindow.Closing?.Invoke(webWindow, args);
@@ -58,7 +60,8 @@ WebWindow: IDisposable {
                 ClosedCallback = closedCallback,
                 ClosingCallback = closingCallback,
                 DpiChangedCallback = dpiChangedCallback,
-            });
+                UriChangedCallback = navigationStartingCallback,
+            });            
         if (hWnd == 0)
             throw new Win32Exception();
 
@@ -78,6 +81,7 @@ WebWindow: IDisposable {
         webWindow._gcHandlesToFree.Add(GCHandle.Alloc(closingCallback));
         webWindow._gcHandlesToFree.Add(GCHandle.Alloc(closedCallback));
         webWindow._gcHandlesToFree.Add(GCHandle.Alloc(dpiChangedCallback));
+        webWindow._gcHandlesToFree.Add(GCHandle.Alloc(navigationStartingCallback));
         var attachResult = Native.WebWindow_AttachWebView(hWnd, webMesasgeReceivedCallback);
         if (attachResult != 0)
             throw new InvalidOperationException("Failed to attach the webview", Marshal.GetExceptionForHR(attachResult));
@@ -86,6 +90,9 @@ WebWindow: IDisposable {
 
     public void
     NavigateToString(string html) => Native.WebWindow_NavigateToString(HWnd, html);
+
+    public void 
+    NavigateToUrl(string url) => Native.WebWindow_NavigateToUrl(HWnd, url);
 
     public void 
     PostMessageAsJson(string json) {
@@ -209,6 +216,14 @@ WindowDpiChangedEventArgs {
     }
 }
 
+public class 
+WindowNavigationStartingEventArgs {
+    public string NewUri {get;}
+    public WindowNavigationStartingEventArgs(string newUri) {
+        NewUri = newUri;
+    }
+}
+
 public struct 
 WindowPosition {
     public int X {get;}
@@ -271,6 +286,9 @@ internal class Native {
     public delegate void WindowDpiChangedCallback(int newDpi);
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Auto)] 
+    public delegate void WindowNavigationStarting([MarshalAs(UnmanagedType.LPWStr)] string newUri);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Auto)] 
     public delegate IntPtr OnWebResourceRequestedCallback([MarshalAs(UnmanagedType.LPWStr)] string url, out int numBytes, out string contentType);
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Auto)] 
@@ -294,6 +312,9 @@ internal class Native {
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int WebWindow_NavigateToString(int hWnd, [MarshalAs(UnmanagedType.LPWStr)] string html);
+
+    [DllImport(DllName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Auto)] 
+    public static extern void WebWindow_NavigateToUrl(int hWnd, string url);
 
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
     public static extern int WebWindow_Invoke(InvokeCallback callback);
@@ -342,6 +363,7 @@ internal class Native {
         public WindowSizeChangedCallback SizeChangedCallback;
         public WindowClosingCallback ClosingCallback;
         public WindowDpiChangedCallback DpiChangedCallback;
+        public WindowNavigationStarting UriChangedCallback;
         public InvokeCallback ClosedCallback;
     }
 
@@ -352,5 +374,4 @@ internal class Native {
         Toolbox = 2
     }
 }
-
 }

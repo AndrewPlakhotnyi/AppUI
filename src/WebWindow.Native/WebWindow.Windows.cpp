@@ -39,6 +39,7 @@ HWND CreateWebWindow(WindowStarupOptions options) {
 	webWindow.ClosingCallback = options.ClosingCallback;
 	webWindow.ClosedCallback = options.ClosedCallback;
 	webWindow.DpiChangedCallback = options.DpiChangedCallback;
+	webWindow.NavigationStartingCallback = options.NavigationStartingCallback;
 	webWindow.style = options.style;
     HWND hWnd = CreateWindowEx(
 		0,                              // Optional window styles.
@@ -141,6 +142,17 @@ HRESULT CreateController(HWND hWnd, WebWindow* webWindow, std::atomic_flag* notR
 					return S_OK;
 				}
 			).Get(), &webResourceRequestedToken);
+
+			EventRegistrationToken navigationStartingToken;
+			webView->add_NavigationStarting(Callback<ICoreWebView2NavigationStartingEventHandler>(
+				[=](ICoreWebView2* sender, ICoreWebView2NavigationStartingEventArgs* args) -> HRESULT {
+
+				wil::unique_cotaskmem_string uri;
+				args->get_Uri(&uri);
+				auto result = uri.get();
+				webWindow->NavigationStartingCallback(result);
+				return S_OK;
+			}).Get(), &navigationStartingToken);
 
             webWindow->controller = controller;
             webWindow->webView = webView;
