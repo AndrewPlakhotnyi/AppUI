@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Runtime.CompilerServices;
@@ -177,7 +178,10 @@ WebWindow: IDisposable {
     public void 
     Dispose() {
         _gcHandlesToFree.ForEach(x => x.Free());
-        _hGlobalsToFree.ForEach(Marshal.FreeHGlobal);
+        //Heap corruption occurs freeing this memory. Probably, it is freed by the c++ code. 
+        //Hope it won't cause a leak
+        //foreach(var hGlobal in _hGlobalsToFree)
+        //    Marshal.FreeHGlobal(hGlobal);   
     }
 }
 

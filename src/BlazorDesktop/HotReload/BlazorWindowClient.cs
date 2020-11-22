@@ -72,12 +72,13 @@ BlazorWindowClientHelper {
                     renderer: renderer,
                     position: default,
                     logger: logger
-                ));
+                ),
+                componentParameters: null);
             logger.LogInformation($"Blazor window has been created for {clock.ElapsedMilliseconds}ms");
             //BlazorDispatcher.Instance.Invoke(() => blazorWindow.OnLoaded());
         });
 
-        blazorWindowClient.NavigateToString(BlazorWindowHelper.GetInitialHtml<TRootComponent>(scriptsToInject));
+        blazorWindowClient.NavigateToString(BlazorWindowHelper.GetInitialHtml(rootComponentType:  typeof(TRootComponent), scriptsToInject));
 
         Task.Run(communicationChannel.StartListening);
 

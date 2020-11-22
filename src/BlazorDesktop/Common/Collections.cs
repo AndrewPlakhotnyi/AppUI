@@ -11,6 +11,5 @@ internal static class Collections {
         else
             dictionary[key] = new List<TValue>(){value};
     }
-
 }
 }

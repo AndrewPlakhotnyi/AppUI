@@ -36,22 +36,29 @@ DesktopRenderer: Renderer {
         JsRuntime = jsRuntime;
     }
 
-    public Task 
-    AddComponentAsync(Type componentType, string domElementSelector, BlazorWindow blazorWindow) {
+    public async Task<ComponentBase> 
+    AddComponentAsync(Type componentType, string domElementSelector, BlazorWindow blazorWindow, IDictionary<string, object>? componentParameters) {
         try {
             var component = InstantiateComponent(componentType);
             var componentId = AssignRootComponentId(component);
             if (component is BlazorWindowContent blazorWindowContent)
                 blazorWindowContent.Window = blazorWindow;
-
+            
             var attachComponentTask = JsRuntime.InvokeAsync<object>(
                 "Blazor._internal.attachRootComponentToElement",
                 domElementSelector,
                 componentId,
                 RendererId);
 
+    
+            if (componentParameters?.Count > 0)
+                await component.SetParametersAsync(ParameterView.FromDictionary(componentParameters));
+
             CaptureAsyncExceptions(attachComponentTask);
-            return RenderRootComponentAsync(componentId);
+            await RenderRootComponentAsync(componentId);
+            if (component is not ComponentBase componentBase)
+                throw new InvalidOperationException($"Expecting a component to be ComponentBase but was {component.GetType()}");
+            return componentBase;
         }
         catch(Exception exception)
         {

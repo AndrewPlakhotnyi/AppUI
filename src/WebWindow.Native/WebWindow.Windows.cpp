@@ -135,6 +135,8 @@ HRESULT CreateController(HWND hWnd, WebWindow* webWindow, std::atomic_flag* notR
 									dataStream, 200, L"OK", (L"Content-Type: " + contentTypeWS).c_str(),
 									&response);
 								args->put_Response(response.get());
+
+                                dataStream->Release();
 							}
 						}
 					}
@@ -176,7 +178,7 @@ HRESULT AttachWebView(WebWindow* webWindow, WebMessageReceivedCallback webMessag
     if (_environment == nullptr) {
 		auto options = Microsoft::WRL::Make<CoreWebView2EnvironmentOptions>();
 		//todo: enable to auto open devtools from c# startup options
-		//options->put_AdditionalBrowserArguments(L"--auto-open-devtools-for-tabs");
+		options->put_AdditionalBrowserArguments(L"--auto-open-devtools-for-tabs");
 	    HRESULT createEnvironmentResult = CreateCoreWebView2EnvironmentWithOptions(nullptr, nullptr, 
 			options.Get(),
             Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>(
@@ -281,6 +283,9 @@ void AddCustomScheme(AutoString scheme, WebResourceRequestedCallback requestHand
 }
 
 void Close(const WebWindow* webWindow){
+    //Check the case when the window has been already closed
+    if (!IsWindow(webWindow->hWnd))
+        return;
 	PostMessage(webWindow->hWnd, WM_CLOSE, 0,0);
 }
 
@@ -378,7 +383,13 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 		WebWindow* webWindow = TryGetWebWindow(hWnd);
 		if (webWindow != NULL && webWindow->ClosedCallback != NULL)
 			webWindow->ClosedCallback();
-		PostQuitMessage(0);
+
+        if (webWindow != NULL){
+            webWindow->controller->Close();
+            WebWindows.erase(webWindow->hWnd);
+        }
+        if (WebWindows.size() == 0)
+		    PostQuitMessage(0);
 		break;
 	}
 	case WM_DPICHANGED: {

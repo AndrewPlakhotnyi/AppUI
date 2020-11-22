@@ -24,10 +24,32 @@ namespace BlazorDesktop {
 public abstract class 
 BlazorWindowContent: ComponentBase {    
     public BlazorWindow Window {get;set;}
+    public async Task OnRootModelChangedAsync(object newModel){
+        await SetParametersAsync(ParameterView.FromDictionary(new Dictionary<string, object>{{"Model", newModel}}));
+        //Can we avoid calling StateHasChanged explicitly?
+        StateHasChanged();
+    }
 }
 
 public class
 BlazorWindow {
+    internal WebWindow WebWindow { get; }
+    internal Lock<WebViewEvents> WebViewEvents { get; }
+    internal DesktopRenderer Renderer {get;}
+    public DesktopJsRuntime JsRuntime { get; }
+    public event EventHandler<WindowMovedEventArgs> Moved;
+    public event EventHandler<WindowSizeChangedEventArgs> SizeChanged;
+    public event EventHandler<WindowClosingEventArgs> Closing;
+    public event EventHandler<WindowDpiChangedEventArgs> DpiChanged;
+    public event EventHandler<WindowNavigationStartingEventArgs> NavigationStarting;
+    public event EventHandler Closed;
+    public event EventHandler Loaded;
+    public ILogger Logger {get;}
+
+    /// <summary>
+    /// RootComponent of the window's content. It is used when we need to update the root model state of the window.
+    /// </summary>
+    public BlazorWindowContent RootComponent {get;set;}
     internal BlazorWindow(WebWindow webWindow, WebViewEvents ipcEvents, DesktopJsRuntime jsRuntime, DesktopRenderer renderer, WindowPosition position, ILogger logger) {
         WebWindow = webWindow;
         WebViewEvents = new Lock<WebViewEvents>(ipcEvents);
@@ -69,18 +91,6 @@ BlazorWindow {
         webWindow.NavigationStarting += (s,e) => NavigationStarting?.Invoke(s, new WindowNavigationStartingEventArgs(e.NewUri));
     }
 
-    internal WebWindow WebWindow { get; }
-    internal Lock<WebViewEvents> WebViewEvents { get; }
-    internal DesktopRenderer Renderer {get;}
-    public DesktopJsRuntime JsRuntime { get; }
-    public event EventHandler<WindowMovedEventArgs> Moved;
-    public event EventHandler<WindowSizeChangedEventArgs> SizeChanged;
-    public event EventHandler<WindowClosingEventArgs> Closing;
-    public event EventHandler<WindowDpiChangedEventArgs> DpiChanged;
-    public event EventHandler<WindowNavigationStartingEventArgs> NavigationStarting;
-    public event EventHandler Closed;
-    public event EventHandler Loaded;
-    public ILogger Logger {get;}
 
     public void 
     OnLoaded() => Loaded?.Invoke(this, EventArgs.Empty);
@@ -88,10 +98,8 @@ BlazorWindow {
     public void 
     OnClosed(){
         Closed?.Invoke(this, EventArgs.Empty);
-        Task.Run(() =>{
-            Task.Delay(2000).Wait();
-            BlazorDispatcher.Instance.Invoke(() => this.WebWindow.Dispose());
-        });
+        this.WebWindow.Dispose();
+        this.Renderer.Dispose();
     }
 
     public WindowPosition Position {get; private set;}
@@ -145,8 +153,17 @@ BlazorWindowHelper {
     }
 
     public static BlazorWindow
-    CreateBlazorWindow<TRootComponent>(this WindowStartupOptions options, ILogger logger, string assetsDirectory = "assets")
-    where TRootComponent : IComponent {
+    CreateBlazorWindow<TRootComponent>(this WindowStartupOptions options, ILogger logger,  IDictionary<string, object> componentParameters, string assetsDirectory = "assets")
+    where TRootComponent: IComponent => 
+        options.CreateBlazorWindow(typeof(TRootComponent), logger, componentParameters, assetsDirectory);
+
+    public static BlazorWindow
+    CreateBlazorWindow(this WindowStartupOptions options,
+        Type rootComponentType, 
+        ILogger logger, 
+        IDictionary<string, object> rootComponentParameters, 
+        string assetsDirectory = "assets")
+    {
         BlazorDispatcher.Instance.VerifyAccess();
         logger.LogInformation("Creating blazor window...");
         var clock = Stopwatch.StartNew();
@@ -187,15 +204,20 @@ BlazorWindowHelper {
             await webViewEvents.PerformHandshakeAsync();
             blazorWindow.Closed += (_,__) => blazorWindow.Renderer.RemoveFromJsInteropDispatcher();
             blazorWindow.AttachJSInterop(CancellationToken.None);
-            await desktopRenderer.AddComponentAsync(
-                componentType: typeof(TRootComponent),
-                domElementSelector: typeof(TRootComponent).Name,
-                blazorWindow: blazorWindow);
+            var rootComponent = await desktopRenderer.AddComponentAsync(
+                componentType: rootComponentType,
+                domElementSelector: rootComponentType.Name,
+                blazorWindow: blazorWindow,
+                componentParameters: rootComponentParameters
+                );
+            if (rootComponent is not BlazorWindowContent blazorWindowContent)
+                throw new InvalidOperationException($"Blazor window root component must be  a {nameof(BlazorWindowContent)} but was {rootComponent.GetType()}");
+            blazorWindow.RootComponent = blazorWindowContent;
             logger.LogInformation($"Blazor window has been created for {clock.ElapsedMilliseconds}ms");
             BlazorDispatcher.Instance.Invoke(() => blazorWindow.OnLoaded());
         });
         
-        webWindow.NavigateToString(GetInitialHtml<TRootComponent>(scriptsToInject: options.Scripts));
+        webWindow.NavigateToString(GetInitialHtml(rootComponentType, scriptsToInject: options.Scripts));
         return blazorWindow;
     }
 
@@ -238,8 +260,10 @@ BlazorWindowHelper {
         }; 
     }
 
+
+
     public static string 
-    GetInitialHtml<TRootComponent>(IEnumerable<string> scriptsToInject){
+    GetInitialHtml(Type rootComponentType, IEnumerable<string> scriptsToInject){
         var scripts = new StringBuilder();
         foreach(var script in scriptsToInject)
             scripts.AppendLine(@$"<script src=""http://assets/{script}""></script>");
@@ -253,7 +277,7 @@ BlazorWindowHelper {
     <link href=""http://assets/css/main.css"" rel=""stylesheet"" />
 </head>
 <body>
-    <{typeof(TRootComponent).Name}>Loading...</{typeof(TRootComponent).Name}>
+    <{rootComponentType.Name}>Loading...</{rootComponentType.Name}>
     <script src=""framework://blazor.desktop.js""></script>
     {scripts}
 </body>
