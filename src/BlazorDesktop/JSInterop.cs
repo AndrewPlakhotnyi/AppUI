@@ -25,7 +25,7 @@ DesktopJsRuntime: JSRuntime {
     VoidTaskResultType = typeof(Task).Assembly.GetType("System.Threading.Tasks.VoidTaskResult", true);
 
     protected override void 
-    BeginInvokeJS(long taskId, string identifier, string? argsJson) => 
+    BeginInvokeJS(long taskId, string identifier, string? argsJson, JSCallResultType resultType, long targetInstanceId) => 
         CommunicationChannel.SendEvent("JS.BeginInvokeJS", taskId, identifier, argsJson);
 
     protected override void 
@@ -35,6 +35,7 @@ DesktopJsRuntime: JSRuntime {
         else 
             CommunicationChannel.SendEvent("JS.EndInvokeDotNet", invocationInfo.CallId, invocationResult.Success);
     }
+
 }
 
 public static class

@@ -21,6 +21,7 @@ export function attachRootComponentToLogicalElement(browserRendererId: number, l
 }
 
 export function attachRootComponentToElement(elementSelector: string, componentId: number, browserRendererId?: number): void {
+  console.log("attaching root component with browser renderid = " + browserRendererId);
   const element = document.querySelector(elementSelector);
   if (!element) {
     throw new Error(`Could not find any element matching selector '${elementSelector}'.`);
@@ -29,6 +30,10 @@ export function attachRootComponentToElement(elementSelector: string, componentI
   // 'allowExistingContents' to keep any prerendered content until we do the first client-side render
   // Only client-side Blazor supplies a browser renderer ID
   attachRootComponentToLogicalElement(browserRendererId || 0, toLogicalElement(element, /* allow existing contents */ true), componentId);
+}
+
+export function getRendererer(browserRendererId: number) {
+  return browserRenderers[browserRendererId];
 }
 
 export function renderBatch(browserRendererId: number, batch: RenderBatch): void {
