@@ -256,6 +256,10 @@ BlazorWindowHelper {
             ".css" => "text/css",
             ".js" => "text/javascript",
             ".wasm" => "application/wasm",
+            ".png" => "image/png",
+            ".jpg" => "image/jpeg",
+            ".jpeg" => "image/jpeg",
+            ".svg" => "image/svg+xml",
             _ => "application/octet-stream"
         }; 
     }
