@@ -33,7 +33,12 @@ BlazorWindowClient: IDisposable {
 public static class 
 BlazorWindowClientHelper {
     public static BlazorWindowClient 
-    CreateBlazorWindowClient<TRootComponent>(ILogger logger, string assetsDirectory, IEnumerable<string> scriptsToInject, Action<IServiceCollection> configureServices){
+    CreateBlazorWindowClient<TRootComponent>(ILogger logger, 
+        string assetsDirectory, 
+        IEnumerable<string> scriptsToInject, 
+        Action<IServiceCollection> configureServices, 
+        IDictionary<string, object>? rootComponentParameters = null)
+    {
         logger.LogInformation("Creating blazor window client");
         var clock = Stopwatch.StartNew();
         var communicationChannel = new BlazorHostWebViewCommunicationChannel(
@@ -73,7 +78,7 @@ BlazorWindowClientHelper {
                     position: default,
                     logger: logger
                 ),
-                componentParameters: null);
+                componentParameters: rootComponentParameters);
             logger.LogInformation($"Blazor window has been created for {clock.ElapsedMilliseconds}ms");
             //BlazorDispatcher.Instance.Invoke(() => blazorWindow.OnLoaded());
         });
