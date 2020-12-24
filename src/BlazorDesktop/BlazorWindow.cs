@@ -24,8 +24,9 @@ namespace BlazorDesktop {
 public abstract class 
 BlazorWindowContent: ComponentBase {    
     public BlazorWindow Window {get;set;}
-    public async Task OnRootModelChangedAsync(object newModel){
-        await SetParametersAsync(ParameterView.FromDictionary(new Dictionary<string, object>{{"Model", newModel}}));
+    
+    public async Task OnParametersChangedAsync(IEnumerable<(string name, object value)> parameters){
+        await SetParametersAsync(ParameterView.FromDictionary(parameters.ToDictionary(x => x.name, x => x.value)));
         //Can we avoid calling StateHasChanged explicitly?
         StateHasChanged();
     }
