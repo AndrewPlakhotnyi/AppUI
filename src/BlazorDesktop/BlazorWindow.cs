@@ -169,7 +169,7 @@ BlazorWindowHelper {
         logger.LogInformation("Creating blazor window...");
         var clock = Stopwatch.StartNew();
         var schemes = CreateSchemes(assetsDirectory);
-
+        JSInteropEventDispatcher.Logger = logger;
         var webWindow = new WebWindowStartupOptions(
             title: options.Title,
             position: options.Position,

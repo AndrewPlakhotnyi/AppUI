@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using Microsoft.JSInterop.Infrastructure;
 
@@ -43,6 +44,8 @@ JSInteropEventDispatcher {
 
     private static Dictionary<int, DesktopRenderer> Renderers = new Dictionary<int, DesktopRenderer>();
     private static object _lockObject = new object();
+    
+    public static ILogger? Logger { get;set;}
 
     internal static DesktopRenderer 
     RegisterInJSInteropEventDispatcher(this DesktopRenderer renderer){
@@ -64,11 +67,19 @@ JSInteropEventDispatcher {
     DispatchEvent(WebEventDescriptor eventDescriptor, string eventArgsJson) {
         var webEvent = WebEventData.Parse(eventDescriptor, eventArgsJson);
         //RendererId is always the hWnd of the window
-        if (Renderers.TryGetValue(webEvent.BrowserRendererId, out var renderer))
-            await renderer.DispatchEventAsync(
-                webEvent.EventHandlerId,
-                webEvent.EventFieldInfo,
-                webEvent.EventArgs);
+        if (Renderers.TryGetValue(webEvent.BrowserRendererId, out var renderer)) 
+            try {
+                Logger.LogInformation($"JS Event: {eventDescriptor.EventArgsType}, {eventArgsJson}");
+                #pragma warning disable BL0006 // Do not use RenderTree types
+                await renderer.DispatchEventAsync(
+                    webEvent.EventHandlerId,
+                    webEvent.EventFieldInfo,
+                    webEvent.EventArgs);
+                    #pragma warning restore BL0006 // Do not use RenderTree types
+            }
+            catch(Exception exception) {
+                Logger?.LogError(exception, message: "Failed to dispatch blazor event");
+            }
     } 
 }
 
@@ -85,16 +96,16 @@ JSInteropHelper {
                 eventName:"BeginInvokeDotNetFromJS", 
                 callback: argsObject => {
                     BlazorDispatcher.Instance.Invoke(() => {
-                            var args = (object[])(argsObject ?? throw new ArgumentException("Args is not expected to be null", nameof(argsObject)));
-                            DotNetDispatcher.BeginInvokeDotNet(
-                                jsRuntime:jsRuntime,
-                                invocationInfo:new DotNetInvocationInfo(
-                                    assemblyName:args[1] != null ? ((JsonElement)args[1]).GetString() : null,
-                                    methodIdentifier: ((JsonElement)args[2]).GetString()?? throw new ArgumentException("AssemblyName is null in the received args"),
-                                    dotNetObjectId: ((JsonElement)args[3]).GetInt64() ,
-                                    callId: ((JsonElement)args[0]).GetString()),
-                                argsJson:((JsonElement)args[4]).GetString());
-                        });
+                        var args = (object[])(argsObject ?? throw new ArgumentException("Args is not expected to be null", nameof(argsObject)));
+                        DotNetDispatcher.BeginInvokeDotNet(
+                            jsRuntime:jsRuntime,
+                            invocationInfo:new DotNetInvocationInfo(
+                                assemblyName:args[1] != null ? ((JsonElement)args[1]).GetString() : null,
+                                methodIdentifier: ((JsonElement)args[2]).GetString()?? throw new ArgumentException("AssemblyName is null in the received args"),
+                                dotNetObjectId: ((JsonElement)args[3]).GetInt64() ,
+                                callId: ((JsonElement)args[0]).GetString()),
+                            argsJson:((JsonElement)args[4]).GetString());
+                    });
                 }
             );
 
