@@ -31,8 +31,8 @@ DesktopJsRuntime: JSRuntime {
 
     protected override void 
     EndInvokeDotNet(DotNetInvocationInfo invocationInfo, in DotNetInvocationResult invocationResult) {
-        if (invocationResult.Result != null && invocationResult.Result.GetType() != VoidTaskResultType)
-            CommunicationChannel.SendEvent("JS.EndInvokeDotNet", invocationInfo.CallId, invocationResult.Success, invocationResult.Result);
+        if (invocationResult.ResultJson != null && invocationResult.ResultJson.GetType() != VoidTaskResultType)
+            CommunicationChannel.SendEvent("JS.EndInvokeDotNet", invocationInfo.CallId, invocationResult.Success, invocationResult.ResultJson);
         else 
             CommunicationChannel.SendEvent("JS.EndInvokeDotNet", invocationInfo.CallId, invocationResult.Success);
     }
